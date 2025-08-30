@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hanoi Cafes (Free)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>#map{height:100vh;margin:0}</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const center = [21.0278, 105.8342]; // Hoàn Kiếm
+    const map = L.map('map').setView(center, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(map);
+
+    const radius = 1200; // meters
+    const q = `
+      [out:json][timeout:25];
+      (
+        node["amenity"="cafe"](around:${radius},${center[0]},${center[1]});
+        way ["amenity"="cafe"](around:${radius},${center[0]},${center[1]});
+        node["shop"="coffee"](around:${radius},${center[0]},${center[1]});
+        way ["shop"="coffee"](around:${radius},${center[0]},${center[1]});
+      );
+      out center tags;
+    `;
+    fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        (data.elements || []).forEach(e => {
+          const lat = e.lat || (e.center && e.center.lat);
+          const lon = e.lon || (e.center && e.center.lon);
+          if (lat == null || lon == null) return;
+          const name = (e.tags && (e.tags['name:vi'] || e.tags.name || e.tags['name:en'])) || 'Quán cà phê';
+          L.circleMarker([lat,lon],{radius:6,weight:2}).addTo(map).bindPopup(name);
+        });
+      })
+      .catch(err => console.error('Overpass error:', err));
+  </script>
+</body>
+</html>
